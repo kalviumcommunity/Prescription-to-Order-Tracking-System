@@ -27,7 +27,7 @@ with Google" button is visual-only; there's no OAuth wired up).
 docker compose up -d
 ```
 
-This starts `postgres:16` on **`localhost:5433`** (host port `5433` → container `5432`, chosen to avoid
+This starts `postgres:16` on **`localhost:5942`** (host port `5942` → container `5432`, chosen to avoid
 clashing with a local PostgreSQL install on 5432) with db `rxtracker` / user `rxuser` / password `rxpass`.
 
 ## 2. Configure the server
@@ -53,7 +53,7 @@ The seed prints login credentials and the **hand-verifiable expected fill rates*
 
 ```bash
 # from server/
-npm run dev             # http://localhost:4000  (nodemon)
+npm run dev             # http://localhost:4879  (nodemon)
 ```
 
 ## 5. Run the SPA
@@ -61,10 +61,10 @@ npm run dev             # http://localhost:4000  (nodemon)
 ```bash
 cd client
 npm install
-npm run dev             # http://localhost:5173  (proxies /api -> :4000)
+npm run dev             # http://localhost:5820  (proxies /api -> :4879)
 ```
 
-Open http://localhost:5173.
+Open http://localhost:5820.
 
 ---
 
@@ -154,3 +154,57 @@ client/
 - `npm run db:seed` · `npm run db:reset` (reset schema then seed)
 - `npm run dev` · `npm start`
 - `npm run test:concurrency`
+
+---
+
+## Deployment
+
+**Database — Render PostgreSQL / Neon / etc.**
+
+Create a hosted Postgres instance and copy its connection string. SSL is enabled
+automatically in `server/src/db.js` whenever `NODE_ENV=production`.
+
+**Backend — Render (Web Service)**
+
+1. Root directory: `server`. Build command: `npm install`. Start command: `npm start`.
+2. Render sets `NODE_ENV=production` and its own `PORT` automatically — the app
+   listens on `process.env.PORT` (`server/src/config.js`), never a hardcoded port.
+3. Set these environment variables in the Render dashboard:
+   - `DATABASE_URL` — the hosted Postgres connection string (**required**)
+   - `JWT_SECRET` — a long random string (**required**)
+   - `JWT_EXPIRES_IN` — e.g. `8h`
+   - `FRONTEND_URL` — the deployed Vercel URL(s), comma-separated if more than one
+   - `SEED_ADMIN_NAME` / `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` — only needed
+     once, to run the seed step below
+
+   `DATABASE_URL` and `JWT_SECRET` are hard requirements: the server throws and
+   refuses to boot in production if either is missing, rather than silently
+   falling back to a local/insecure default.
+4. After the first deploy, run migrations and seed once from a Render Shell (or
+   any machine with `DATABASE_URL` pointed at the same database):
+   ```bash
+   npm run db:migrate
+   npm run db:seed
+   ```
+   `db:seed` also refuses to run with the default admin credentials once
+   `NODE_ENV=production` — set real `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` first.
+
+**Frontend — Vercel**
+
+1. Root directory: `client`. Framework preset: Vite. Build command: `npm run build`.
+   Output directory: `dist`.
+2. Set the environment variable `VITE_API_URL` to the deployed Render backend's
+   URL, e.g. `https://your-backend.onrender.com` (no trailing slash, no `/api`
+   suffix — the app appends `/api/...` itself). Locally this stays empty so
+   requests go through the Vite dev proxy instead.
+3. `client/vercel.json` adds a SPA rewrite so client-side routes
+   (`/login`, `/doctor`, `/pharmacy`, `/admin/...`) don't 404 on a hard refresh
+   — static assets are still served directly, the rewrite only catches routes
+   that don't match a real file.
+
+**CORS**
+
+The backend only accepts requests from `http://localhost:5820` plus whatever
+origins are listed in `FRONTEND_URL` (`server/src/index.js`). Update
+`FRONTEND_URL` on Render whenever the Vercel URL changes (e.g. after attaching
+a custom domain).
