@@ -31,6 +31,15 @@ async function clearData(client) {
 }
 
 async function main() {
+  if (config.isProduction && (!process.env.SEED_ADMIN_EMAIL || !process.env.SEED_ADMIN_PASSWORD)) {
+    console.error(
+      'Refusing to seed: SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD must be set explicitly ' +
+      'when NODE_ENV=production (no falling back to the dev default admin account).'
+    );
+    process.exitCode = 1;
+    return;
+  }
+
   try {
     const adminHash = await hashPassword(config.seedAdmin.password);
     const doctorHash = await hashPassword('doctor12345');
