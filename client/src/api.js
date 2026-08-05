@@ -1,5 +1,10 @@
 // Thin fetch wrapper. Attaches the JWT and normalizes errors.
 
+// Empty in local dev -> requests stay relative ("/api/...") and go through the
+// Vite proxy. Set to the deployed backend's origin in production (e.g. a
+// Render URL) so the built SPA talks to it directly, with no proxy involved.
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+
 const TOKEN_KEY = 'rx_token';
 
 export function getToken() {
@@ -25,19 +30,31 @@ async function request(method, path, body) {
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`/api${path}`, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  let res;
+  try {
+    res = await fetch(`${API_BASE}/api${path}`, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch {
+    // fetch() itself throws on DNS/offline/CORS failures — the server was never reached.
+    throw new ApiError(0, 'network_error', 'Could not reach the server');
+  }
 
   let data = null;
-  const text = await res.text();
+  let text;
+  try {
+    text = await res.text();
+  } catch {
+    throw new ApiError(0, 'network_error', 'Connection interrupted while reading the response');
+  }
   if (text) {
     try {
       data = JSON.parse(text);
     } catch {
-      data = { error: text };
+      // Server responded but the body isn't the JSON shape the client expects.
+      throw new ApiError(res.status, 'unexpected_data', 'The server returned a response the app could not understand');
     }
   }
 
