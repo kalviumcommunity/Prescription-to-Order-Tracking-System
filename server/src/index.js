@@ -13,7 +13,22 @@ const adminRoutes = require('./routes/admin');
 
 const app = express();
 
-app.use(cors());
+// Always allow the local Vite dev server; add any deployed frontend(s) via
+// FRONTEND_URL (comma-separated for multiple origins, e.g. preview + prod).
+const allowedOrigins = [
+  'http://localhost:5820',
+  ...config.frontendUrl.split(',').map((s) => s.trim()).filter(Boolean),
+];
+
+app.use(cors({
+  origin(origin, callback) {
+    // No Origin header = same-origin, curl, health checks, server-to-server — allow.
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new ApiError(403, 'cors_rejected', `Origin "${origin}" is not allowed`));
+  },
+  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json());
 
 // Health check.
@@ -34,8 +49,8 @@ app.use(errorHandler);
 
 // Only listen when run directly (the concurrency test imports the app instead).
 if (require.main === module) {
-  const server = app.listen(config.port, () => {
-    console.log(`API listening on http://localhost:${config.port}`);
+  const server = app.listen(config.port, '0.0.0.0', () => {
+    console.log(`API listening on http://0.0.0.0:${config.port}`);
   });
 
   const shutdown = () => {
