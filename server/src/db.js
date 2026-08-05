@@ -3,7 +3,14 @@
 const { Pool } = require('pg');
 const config = require('./config');
 
-const pool = new Pool({ connectionString: config.databaseUrl });
+// Hosted Postgres (Render, Neon, ...) requires SSL; the local docker-compose
+// instance doesn't speak it at all, so this only turns on in production.
+// rejectUnauthorized: false because these providers use certs that don't
+// chain to a CA Node trusts by default — the connection is still encrypted.
+const pool = new Pool({
+  connectionString: config.databaseUrl,
+  ssl: config.isProduction ? { rejectUnauthorized: false } : false,
+});
 
 // Simple query helper against the pool.
 function query(text, params) {
