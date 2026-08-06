@@ -8,12 +8,12 @@ import DoctorDashboard from './pages/doctor/Dashboard.jsx';
 import DoctorPrescriptions from './pages/doctor/Prescriptions.jsx';
 import CreatePrescription from './pages/doctor/CreatePrescription.jsx';
 import Analytics from './pages/doctor/Analytics.jsx';
-import PharmacyDashboard from './pages/pharmacy/Dashboard.jsx';
-import PendingPrescriptions from './pages/pharmacy/PendingPrescriptions.jsx';
-import FilledHistory from './pages/pharmacy/FilledHistory.jsx';
-import AdminDoctors from './pages/admin/Doctors.jsx';
-import AdminPharmacies from './pages/admin/Pharmacies.jsx';
-import AdminPrescriptions from './pages/admin/AllPrescriptions.jsx';
+import PharmacyDashboard from './pages/Pharmacy/Dashboard.jsx';
+import PendingPrescriptions from './pages/Pharmacy/PendingPrescriptions.jsx';
+import FilledHistory from './pages/Pharmacy/FilledHistory.jsx';
+import AdminDoctors from './pages/Admin/Doctors.jsx';
+import AdminPharmacies from './pages/Admin/Pharmacies.jsx';
+import AdminPrescriptions from './pages/Admin/AllPrescriptions.jsx';
 
 // Sends an authenticated user to their role's home; otherwise to login.
 function Home() {
